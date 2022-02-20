@@ -5,10 +5,12 @@ use blake3::Hash;
 fn main() {
     println!("Start media-scanner");
     let root_path = Path::new(".");
-    let tree = build_tree(root_path, 0);
-    for entry in tree.unwrap() {
+    let tree = build_tree(root_path, 0).unwrap();
+    for entry in &tree {
         println!("{}", &entry);
     }
+    let duplicates = find_duplicates(tree);
+    println!("Duplicates:{:?}", duplicates.unwrap().len());
 }
 
 fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
@@ -45,7 +47,26 @@ fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
     Some(entries)
 }
 
-#[derive(Debug)]
+fn find_duplicates(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
+    let mut duplicates = vec![];
+    let mut flat_list = vec![];
+    for entry in tree {
+        create_flat_list(&mut flat_list, entry);    
+    }
+    println!("Flat items:{:?}", flat_list.len());
+    Some(duplicates)
+}
+
+fn create_flat_list(flat_list: &mut Vec<Entry>, parent: Entry) {
+    flat_list.push(parent.clone());
+    if !parent.children.is_empty() {
+        for child in parent.children {
+            create_flat_list(flat_list, child);
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct Entry {
     is_file: bool,
     path: String,
@@ -87,4 +108,16 @@ impl std::fmt::Display for Entry {
             write!(f, "{}-----Folders:{:?} Files:{:?}-----", place_holder, self.children.iter().filter(|&item| !item.is_file).count(), self.children.iter().filter(|&item| item.is_file).count())
         }
     }
+}
+
+#[derive(Debug)]
+struct Duplicates {
+    hash: Hash,
+    matches: Vec<DuplicateEntry>,
+}
+
+#[derive(Debug)]
+struct DuplicateEntry {
+    name: String,
+    path: String
 }

@@ -1,4 +1,6 @@
-use std::path::Path;
+use std::{path::Path, collections::hash_map::DefaultHasher, hash::Hasher, io::Read};
+
+use blake3::Hash;
 
 fn main() {
     println!("Start media-scanner");
@@ -25,6 +27,12 @@ fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
         new_entry.path = String::from(path.as_path().to_str().unwrap());
         if path.is_file() {
             new_entry.is_file = true;
+            
+            let mut file = std::fs::File::open(path).unwrap();
+            let mut file_content = vec![];
+            if file.read_to_end(&mut file_content).is_ok() {
+                new_entry.hash = Some(blake3::hash(&file_content));
+            }
         } else if path.is_dir() {
             new_entry.is_file = false;
             let children = build_tree(path.as_path().clone(), new_entry.level + 1);
@@ -44,6 +52,7 @@ struct Entry {
     name: String,
     children: Vec<Entry>,
     level: u8,
+    hash: Option<Hash>,
 }
 
 impl Entry {
@@ -54,6 +63,7 @@ impl Entry {
             name: Default::default(),
             children: vec![],
             level: Default::default(),
+            hash: None,
         }
     }
 }
@@ -61,7 +71,11 @@ impl Entry {
 impl std::fmt::Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.is_file {
-            write!(f, "{:?}", self.name)
+            if self.hash.is_some() {
+                write!(f, "{:?} {:?}", self.name, self.hash.unwrap())
+            } else {
+                write!(f, "{:?}", self.name)
+            }
         } else {
             let place_holder = String::from("    ").repeat(self.level as usize);
             println!("{}=> {:?} (level {:?})", place_holder, self.name, self.level);

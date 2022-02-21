@@ -48,13 +48,48 @@ fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
 }
 
 fn find_duplicates(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
-    let mut duplicates = vec![];
+    let mut duplicates: Vec<Duplicates> = vec![];
     let mut flat_list = vec![];
     for entry in tree {
         create_flat_list(&mut flat_list, entry);    
     }
     println!("Flat items:{:?}", flat_list.len());
+
+    for entry in &flat_list {
+        if entry.hash.is_some() {
+            let hash = entry.hash.unwrap();
+            if duplicates.iter().filter(|x|x.hash.unwrap() == hash).count() == 0 {
+                // unchecked hash values
+                let duplicate = get_items_by_hash(hash, &flat_list);
+                if duplicate.is_some() {
+                    duplicates.push(duplicate.unwrap());
+                }
+            }
+        }
+    }
+
+    println!("Duplicate items:{:?}", duplicates.len());
     Some(duplicates)
+}
+
+fn get_items_by_hash(hash: Hash, items: &Vec<Entry>) -> Option<Duplicates> {
+    let mut duplicate = Duplicates::new();
+    duplicate.hash = Some(hash.clone());
+    for entry in items {
+        if entry.hash.is_some() {
+            if entry.hash.unwrap() == hash {
+                duplicate.matches.push(DuplicateEntry {
+                    name: entry.name.to_owned(),
+                    path: entry.path.to_owned(),
+                });
+            }
+        }
+    }
+    // atleast 2 matches because we add our self
+    if duplicate.matches.len() > 1 {
+        return Some(duplicate);
+    }
+    None
 }
 
 fn create_flat_list(flat_list: &mut Vec<Entry>, parent: Entry) {
@@ -112,8 +147,17 @@ impl std::fmt::Display for Entry {
 
 #[derive(Debug)]
 struct Duplicates {
-    hash: Hash,
+    hash: Option<Hash>,
     matches: Vec<DuplicateEntry>,
+}
+
+impl Duplicates {
+    fn new() -> Self {
+        Self {
+            hash: None,
+            matches: vec![],
+        }
+    }
 }
 
 #[derive(Debug)]

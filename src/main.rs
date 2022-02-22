@@ -9,8 +9,11 @@ fn main() {
     for entry in &tree {
         println!("{}", &entry);
     }
-    let duplicates = find_duplicates(tree);
-    println!("Duplicates:{:?}", duplicates.unwrap().len());
+    let duplicates = find_duplicates(tree).unwrap();
+    println!("Duplicates:{:?}", duplicates.len());
+    for entry in &duplicates {
+        println!("{}", &entry);
+    }
 }
 
 fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
@@ -160,8 +163,24 @@ impl Duplicates {
     }
 }
 
+impl std::fmt::Display for Duplicates {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        println!("Match {:?}", self.hash.unwrap());
+        for entry in &self.matches {
+            println!("{}", &entry);
+        }
+        write!(f, "Entires {:?}", self.matches.len())
+    }
+}
+
 #[derive(Debug)]
 struct DuplicateEntry {
     name: String,
     path: String
+}
+
+impl std::fmt::Display for DuplicateEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?} {:?}", self.name, self.path)
+    }
 }

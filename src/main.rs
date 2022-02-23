@@ -10,23 +10,36 @@ struct Args {
     /// Path to check for duplicates ("." to use thestartup path)
     #[clap(short, long)]
     path: String,
+    /// Print file tree to the output
+    #[clap(short='t', long)]
+    output_tree: bool,
+    /// Print the duplicates to the output
+    #[clap(short='d', long)]
+    output_duplicates: bool,
 }
 
 fn main() {
     let args = Args::parse();
     let path = args.path.to_owned();
+    let show_tree = args.output_tree;
+    let show_duplicates = args.output_duplicates;
 
     println!("Start media-scanner");
     
     let root_path = Path::new(&path);
     let tree = build_tree(root_path, 0).unwrap();
-    for entry in &tree {
-        println!("{}", &entry);
+    if show_tree {
+        for entry in &tree {
+            println!("{}", &entry);
+        }
     }
+    
     let duplicates = find_duplicates(tree).unwrap();
     println!("Duplicates:{:?}", duplicates.len());
-    for entry in &duplicates {
-        println!("{}", &entry);
+    if show_duplicates {
+        for entry in &duplicates {
+            println!("{}", &entry);
+        }
     }
 }
 

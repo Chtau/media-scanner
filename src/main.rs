@@ -1,10 +1,24 @@
-use std::{path::Path, collections::hash_map::DefaultHasher, hash::Hasher, io::Read};
+use std::{path::Path, io::Read};
 
 use blake3::Hash;
+use clap::Parser;
+
+/// Simple duplicates check
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Path to check for duplicates ("." to use thestartup path)
+    #[clap(short, long)]
+    path: String,
+}
 
 fn main() {
+    let args = Args::parse();
+    let path = args.path.to_owned();
+
     println!("Start media-scanner");
-    let root_path = Path::new(".");
+    
+    let root_path = Path::new(&path);
     let tree = build_tree(root_path, 0).unwrap();
     for entry in &tree {
         println!("{}", &entry);

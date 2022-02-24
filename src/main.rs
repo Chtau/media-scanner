@@ -1,4 +1,4 @@
-use std::{path::Path, io::Read};
+use std::{path::Path, io::{Read, Write}, fs::File};
 
 use blake3::Hash;
 use clap::Parser;
@@ -16,6 +16,9 @@ struct Args {
     /// Print the duplicates to the output
     #[clap(short='d', long)]
     output_duplicates: bool,
+    /// Saves the duplicates the given file
+    #[clap(short='s', long)]
+    save_duplicates: Option<String>,
 }
 
 fn main() {
@@ -23,6 +26,7 @@ fn main() {
     let path = args.path.to_owned();
     let show_tree = args.output_tree;
     let show_duplicates = args.output_duplicates;
+    let save_path = args.save_duplicates.to_owned();
 
     println!("Start media-scanner");
     
@@ -39,6 +43,22 @@ fn main() {
     if show_duplicates {
         for entry in &duplicates {
             println!("{}", &entry);
+        }
+    }
+    if save_path.is_some() {
+        let mut dup_file = File::create(save_path.unwrap()).unwrap();
+        for entry in &duplicates {
+            let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
+            let result = dup_file.write(line.as_bytes());
+            if result.is_ok() {
+                for match_entry in &entry.matches {
+                    let line = match_entry.path.to_owned() + "\n";
+                    let result = dup_file.write(line.as_bytes());
+                    if !result.is_ok() {
+                        println!(".Could not write Entry: {} to file", &match_entry);
+                    }
+                }
+            }
         }
     }
 }

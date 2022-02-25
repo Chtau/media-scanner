@@ -19,6 +19,8 @@ struct Args {
     /// Saves the duplicates the given file
     #[clap(short='s', long)]
     save_duplicates: Option<String>,
+    #[clap(short='r', long)]
+    remove_duplicates: bool,
 }
 
 fn main() {
@@ -27,6 +29,7 @@ fn main() {
     let show_tree = args.output_tree;
     let show_duplicates = args.output_duplicates;
     let save_path = args.save_duplicates.to_owned();
+    let remove_duplicates = args.remove_duplicates;
 
     println!("Start media-scanner");
     
@@ -57,6 +60,21 @@ fn main() {
                     if !result.is_ok() {
                         println!(".Could not write Entry: {} to file", &match_entry);
                     }
+                }
+            }
+        }
+    }
+
+    if remove_duplicates {
+        for entry in &duplicates {
+            println!("Delete duplicates for Hash:{}", entry.hash.unwrap());
+            for (index, match_entry) in entry.matches.iter().enumerate() {
+                if index == 0 {
+                    continue;
+                }
+                let delete_result = std::fs::remove_file(match_entry.path.to_owned());
+                if delete_result.is_err() {
+                    println!("Could not delete File:{}", match_entry.path.to_owned());
                 }
             }
         }

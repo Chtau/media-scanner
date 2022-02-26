@@ -125,7 +125,7 @@ fn find_duplicates(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
     for entry in tree {
         create_flat_list(&mut flat_list, entry);    
     }
-    println!("Flat items:{:?}", flat_list.len());
+    println!("Total files:{:?}", flat_list.len());
 
     for entry in &flat_list {
         if entry.hash.is_some() {
@@ -139,8 +139,6 @@ fn find_duplicates(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
             }
         }
     }
-
-    println!("Duplicate items:{:?}", duplicates.len());
     Some(duplicates)
 }
 

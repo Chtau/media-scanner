@@ -34,6 +34,13 @@ fn main() {
     println!("Start media-scanner");
     
     let root_path = Path::new(&path);
+    if !root_path.is_dir() {
+        println!("Invalid Path:{:?}", root_path);
+        return;
+    } else {
+        println!("Use absolute Path:{}", root_path.canonicalize().unwrap().display())
+    }
+
     let tree = build_tree(root_path, 0).unwrap();
     if show_tree {
         for entry in &tree {
@@ -75,6 +82,8 @@ fn main() {
                 let delete_result = std::fs::remove_file(match_entry.path.to_owned());
                 if delete_result.is_err() {
                     println!("Could not delete File:{}", match_entry.path.to_owned());
+                } else {
+                    println!("Deleted file:{}", match_entry.path.to_owned());
                 }
             }
         }
@@ -82,11 +91,6 @@ fn main() {
 }
 
 fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
-    if !directory.is_dir() {
-        println!("Invalid Path:{:?}", directory);
-        return None;
-    }
-
     let mut entries = vec![];
     for entry in std::fs::read_dir(directory).unwrap() {
         let mut new_entry = Entry::new();

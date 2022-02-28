@@ -1,4 +1,4 @@
-use std::{path::Path, io::{Read, Write}, fs::File};
+use std::{path::Path, io::{Read, Write}, fs::File, string};
 
 use blake3::Hash;
 use clap::Parser;
@@ -10,26 +10,36 @@ struct Args {
     /// Path to check for duplicates ("." to use thestartup path)
     #[clap(short, long)]
     path: String,
-    /// Print file tree to the output
-    #[clap(short='t', long)]
-    output_tree: bool,
-    /// Print the duplicates to the output
+    /// Print trace to the output
+    #[clap(short='o', long)]
+    output_trace: bool,
+    /// Find duplicate files
     #[clap(short='d', long)]
-    output_duplicates: bool,
-    /// Saves the duplicates the given file
-    #[clap(short='s', long)]
-    save_duplicates: Option<String>,
+    find_duplicate: bool,
+    /// Find with name expression
+    #[clap(short='n', long)]
+    find_name: Option<String>,
+
+    /// Persist the detected files to a local file
+    #[clap(short='p', long)]
+    persist_file: Option<String>,
+
+    /// Remove (delete) the result files
     #[clap(short='r', long)]
-    remove_duplicates: bool,
+    remove_result: bool,
+    
 }
 
 fn main() {
     let args = Args::parse();
     let path = args.path.to_owned();
-    let show_tree = args.output_tree;
-    let show_duplicates = args.output_duplicates;
-    let save_path = args.save_duplicates.to_owned();
-    let remove_duplicates = args.remove_duplicates;
+    let show_trace = args.output_trace;
+    
+    let persist_file = args.persist_file.to_owned();
+    let remove_result = args.remove_result;
+
+    let find_duplicates = args.find_duplicate;
+    let find_name = args.find_name.to_owned();
 
     println!("Start media-scanner");
     
@@ -42,21 +52,21 @@ fn main() {
     }
 
     let tree = build_tree(root_path, 0).unwrap();
-    if show_tree {
+    if show_trace {
         for entry in &tree {
             println!("{}", &entry);
         }
     }
     
-    let duplicates = find_duplicates(tree).unwrap();
+    let duplicates = find_duplicate_files(tree).unwrap();
     println!("Duplicates:{:?}", duplicates.len());
-    if show_duplicates {
+    if show_trace {
         for entry in &duplicates {
             println!("{}", &entry);
         }
     }
-    if save_path.is_some() {
-        let mut dup_file = File::create(save_path.unwrap()).unwrap();
+    if persist_file.is_some() {
+        let mut dup_file = File::create(persist_file.unwrap()).unwrap();
         for entry in &duplicates {
             let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
             let result = dup_file.write(line.as_bytes());
@@ -72,7 +82,7 @@ fn main() {
         }
     }
 
-    if remove_duplicates {
+    if remove_result {
         for entry in &duplicates {
             println!("Delete duplicates for Hash:{}", entry.hash.unwrap());
             for (index, match_entry) in entry.matches.iter().enumerate() {
@@ -119,7 +129,7 @@ fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
     Some(entries)
 }
 
-fn find_duplicates(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
+fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
     let mut duplicates: Vec<Duplicates> = vec![];
     let mut flat_list = vec![];
     for entry in tree {

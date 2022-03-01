@@ -51,56 +51,57 @@ fn main() {
         println!("Use absolute Path:{}", root_path.canonicalize().unwrap().display())
     }
 
-    let tree = build_tree(root_path, 0).unwrap();
-    if show_trace {
-        for entry in &tree {
-            println!("{}", &entry);
-        }
-    }
+    let tree = build_tree(root_path, 0, show_trace).unwrap();
     
-    let duplicates = find_duplicate_files(tree).unwrap();
-    println!("Duplicates:{:?}", duplicates.len());
-    if show_trace {
-        for entry in &duplicates {
-            println!("{}", &entry);
+    if find_duplicates {
+        let duplicates = find_duplicate_files(tree).unwrap();
+        println!("Duplicates:{:?}", duplicates.len());
+        if show_trace {
+            for entry in &duplicates {
+                println!("{}", &entry);
+            }
         }
-    }
-    if persist_file.is_some() {
-        let mut dup_file = File::create(persist_file.unwrap()).unwrap();
-        for entry in &duplicates {
-            let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
-            let result = dup_file.write(line.as_bytes());
-            if result.is_ok() {
-                for match_entry in &entry.matches {
-                    let line = match_entry.path.to_owned() + "\n";
-                    let result = dup_file.write(line.as_bytes());
-                    if !result.is_ok() {
-                        println!(".Could not write Entry: {} to file", &match_entry);
+
+        if persist_file.is_some() {
+            let mut dup_file = File::create(persist_file.unwrap()).unwrap();
+            for entry in &duplicates {
+                let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
+                let result = dup_file.write(line.as_bytes());
+                if result.is_ok() {
+                    for match_entry in &entry.matches {
+                        let line = match_entry.path.to_owned() + "\n";
+                        let result = dup_file.write(line.as_bytes());
+                        if !result.is_ok() {
+                            println!(".Could not write Entry: {} to file", &match_entry);
+                        }
                     }
                 }
             }
         }
-    }
 
-    if remove_result {
-        for entry in &duplicates {
-            println!("Delete duplicates for Hash:{}", entry.hash.unwrap());
-            for (index, match_entry) in entry.matches.iter().enumerate() {
-                if index == 0 {
-                    continue;
-                }
-                let delete_result = std::fs::remove_file(match_entry.path.to_owned());
-                if delete_result.is_err() {
-                    println!("Could not delete File:{}", match_entry.path.to_owned());
-                } else {
-                    println!("Deleted file:{}", match_entry.path.to_owned());
+        if remove_result {
+            for entry in &duplicates {
+                println!("Delete duplicates for Hash:{}", entry.hash.unwrap());
+                for (index, match_entry) in entry.matches.iter().enumerate() {
+                    if index == 0 {
+                        continue;
+                    }
+                    let delete_result = std::fs::remove_file(match_entry.path.to_owned());
+                    if delete_result.is_err() {
+                        println!("Could not delete File:{}", match_entry.path.to_owned());
+                    } else {
+                        println!("Deleted file:{}", match_entry.path.to_owned());
+                    }
                 }
             }
         }
     }
 }
 
-fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
+fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Vec<Entry>> {
+    if show_trace {
+        println!("Directory:{}", directory.display())
+    }
     let mut entries = vec![];
     for entry in std::fs::read_dir(directory).unwrap() {
         let mut new_entry = Entry::new();
@@ -110,8 +111,10 @@ fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
         new_entry.name = entry.file_name().into_string().unwrap();
         new_entry.path = String::from(path.as_path().to_str().unwrap());
         if path.is_file() {
+            if show_trace {
+                println!("File:{}", path.display())
+            }
             new_entry.is_file = true;
-            
             let mut file = std::fs::File::open(path).unwrap();
             let mut file_content = vec![];
             if file.read_to_end(&mut file_content).is_ok() {
@@ -119,7 +122,7 @@ fn build_tree(directory: &Path, parent_level: u8) -> Option<Vec<Entry>> {
             }
         } else if path.is_dir() {
             new_entry.is_file = false;
-            let children = build_tree(path.as_path().clone(), new_entry.level + 1);
+            let children = build_tree(path.as_path().clone(), new_entry.level + 1, show_trace);
             if children.is_some() {
                 new_entry.children = children.unwrap();
             }

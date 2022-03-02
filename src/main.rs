@@ -53,18 +53,20 @@ fn main() {
 
     let tree = build_tree(root_path, 0, show_trace).unwrap();
     
+    let mut matches = vec![];
+
     if find_duplicates {
-        let duplicates = find_duplicate_files(tree).unwrap();
-        println!("Duplicates:{:?}", duplicates.len());
+        matches = find_duplicate_files(tree).unwrap();
+        println!("Duplicates:{:?}", matches.len());
         if show_trace {
-            for entry in &duplicates {
+            for entry in &matches {
                 println!("{}", &entry);
             }
         }
 
         if persist_file.is_some() {
             let mut dup_file = File::create(persist_file.unwrap()).unwrap();
-            for entry in &duplicates {
+            for entry in &matches {
                 let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
                 let result = dup_file.write(line.as_bytes());
                 if result.is_ok() {
@@ -80,8 +82,8 @@ fn main() {
         }
 
         if remove_result {
-            for entry in &duplicates {
-                println!("Delete duplicates for Hash:{}", entry.hash.unwrap());
+            for entry in &matches {
+                println!("Delete Match for Hash:{}", entry.hash.unwrap());
                 for (index, match_entry) in entry.matches.iter().enumerate() {
                     if index == 0 {
                         continue;
@@ -132,8 +134,8 @@ fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Ve
     Some(entries)
 }
 
-fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
-    let mut duplicates: Vec<Duplicates> = vec![];
+fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Match>> {
+    let mut duplicates: Vec<Match> = vec![];
     let mut flat_list = vec![];
     for entry in tree {
         create_flat_list(&mut flat_list, entry);    
@@ -155,13 +157,13 @@ fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Duplicates>> {
     Some(duplicates)
 }
 
-fn get_items_by_hash(hash: Hash, items: &Vec<Entry>) -> Option<Duplicates> {
-    let mut duplicate = Duplicates::new();
+fn get_items_by_hash(hash: Hash, items: &Vec<Entry>) -> Option<Match> {
+    let mut duplicate = Match::new();
     duplicate.hash = Some(hash.clone());
     for entry in items {
         if entry.hash.is_some() {
             if entry.hash.unwrap() == hash {
-                duplicate.matches.push(DuplicateEntry {
+                duplicate.matches.push(MatchEntry {
                     name: entry.name.to_owned(),
                     path: entry.path.to_owned(),
                 });
@@ -229,12 +231,12 @@ impl std::fmt::Display for Entry {
 }
 
 #[derive(Debug)]
-struct Duplicates {
+struct Match {
     hash: Option<Hash>,
-    matches: Vec<DuplicateEntry>,
+    matches: Vec<MatchEntry>,
 }
 
-impl Duplicates {
+impl Match {
     fn new() -> Self {
         Self {
             hash: None,
@@ -243,7 +245,7 @@ impl Duplicates {
     }
 }
 
-impl std::fmt::Display for Duplicates {
+impl std::fmt::Display for Match {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         println!("Match {:?}", self.hash.unwrap());
         for entry in &self.matches {
@@ -254,12 +256,12 @@ impl std::fmt::Display for Duplicates {
 }
 
 #[derive(Debug)]
-struct DuplicateEntry {
+struct MatchEntry {
     name: String,
     path: String
 }
 
-impl std::fmt::Display for DuplicateEntry {
+impl std::fmt::Display for MatchEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?} {:?}", self.name, self.path)
     }

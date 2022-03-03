@@ -1,4 +1,4 @@
-use std::{path::Path, io::{Read, Write}, fs::File, string};
+use std::{path::Path, io::{Read, Write}, fs::File};
 
 use blake3::Hash;
 use clap::Parser;
@@ -63,40 +63,46 @@ fn main() {
                 println!("{}", &entry);
             }
         }
+    }
 
-        if persist_file.is_some() {
-            let mut dup_file = File::create(persist_file.unwrap()).unwrap();
-            for entry in &matches {
-                let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
-                let result = dup_file.write(line.as_bytes());
-                if result.is_ok() {
-                    for match_entry in &entry.matches {
-                        let line = match_entry.path.to_owned() + "\n";
-                        let result = dup_file.write(line.as_bytes());
-                        if !result.is_ok() {
-                            println!(".Could not write Entry: {} to file", &match_entry);
-                        }
+    if find_name.is_some() {
+        // TODO: handle find files
+    }
+
+    if persist_file.is_some() {
+        let mut dup_file = File::create(persist_file.unwrap()).unwrap();
+        for entry in &matches {
+            let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
+            let result = dup_file.write(line.as_bytes());
+            if result.is_ok() {
+                for match_entry in &entry.matches {
+                    let line = match_entry.path.to_owned() + "\n";
+                    let result = dup_file.write(line.as_bytes());
+                    if !result.is_ok() {
+                        println!(".Could not write Entry: {} to file", &match_entry);
                     }
                 }
             }
         }
+    }
 
-        if remove_result {
-            for entry in &matches {
-                println!("Delete Match for Hash:{}", entry.hash.unwrap());
-                for (index, match_entry) in entry.matches.iter().enumerate() {
-                    if index == 0 {
-                        continue;
-                    }
-                    let delete_result = std::fs::remove_file(match_entry.path.to_owned());
-                    if delete_result.is_err() {
-                        println!("Could not delete File:{}", match_entry.path.to_owned());
-                    } else {
-                        println!("Deleted file:{}", match_entry.path.to_owned());
-                    }
+    if remove_result {
+        for entry in &matches {
+            println!("Delete Match for Hash:{}", entry.hash.unwrap());
+            for (index, match_entry) in entry.matches.iter().enumerate() {
+                if index == 0 {
+                    continue;
+                }
+                let delete_result = std::fs::remove_file(match_entry.path.to_owned());
+                if delete_result.is_err() {
+                    println!("Could not delete File:{}", match_entry.path.to_owned());
+                } else {
+                    println!("Deleted file:{}", match_entry.path.to_owned());
                 }
             }
         }
+    } else {
+        println!("{} matches collected. No future action!", matches.len());
     }
 }
 

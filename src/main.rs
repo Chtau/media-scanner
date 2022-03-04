@@ -21,7 +21,7 @@ struct Args {
     find_name: Option<String>,
 
     /// Persist the detected files to a local file
-    #[clap(short='p', long)]
+    #[clap(short='s', long)]
     persist_file: Option<String>,
 
     /// Remove (delete) the result files
@@ -140,7 +140,7 @@ fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Ve
 }
 
 fn find_matching_files(tree: Vec<Entry>, key: String) -> Option<Vec<Match>> {
-    let mut matches = vec![];
+    let mut matches: Vec<Match> = vec![];
     let mut flat_list = vec![];
     for entry in tree {
         create_flat_list(&mut flat_list, entry);
@@ -149,9 +149,21 @@ fn find_matching_files(tree: Vec<Entry>, key: String) -> Option<Vec<Match>> {
 
     for entry in &flat_list {
         if entry.name.to_uppercase().contains(&value) {
-            let match_entry = get_items_by_hash(entry.hash.unwrap(), &flat_list);
-            if match_entry.is_some() {
-                matches.push(match_entry.unwrap());
+            let dupl_entry: Option<&mut Match> = matches.iter_mut().find(|x| x.hash.unwrap() == entry.hash.unwrap());
+            if dupl_entry.is_some() {
+                let dupl_match = dupl_entry.unwrap();
+                dupl_match.matches.push(MatchEntry {
+                    name: entry.name.to_owned(),
+                    path: entry.path.to_owned(),
+                });
+            } else {
+                let mut duplicate = Match::new();
+                duplicate.hash = Some(entry.hash.unwrap().clone());
+                duplicate.matches.push(MatchEntry {
+                    name: entry.name.to_owned(),
+                    path: entry.path.to_owned(),
+                });
+                matches.push(duplicate);
             }
         }
     }
@@ -255,7 +267,7 @@ impl std::fmt::Display for Entry {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Match {
     hash: Option<Hash>,
     matches: Vec<MatchEntry>,
@@ -280,7 +292,7 @@ impl std::fmt::Display for Match {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MatchEntry {
     name: String,
     path: String

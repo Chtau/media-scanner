@@ -58,15 +58,14 @@ fn main() {
     if find_duplicates {
         matches = find_duplicate_files(tree).unwrap();
         println!("Duplicates:{:?}", matches.len());
-        if show_trace {
-            for entry in &matches {
-                println!("{}", &entry);
-            }
-        }
+    } else if find_name.is_some() {
+        matches = find_matching_files(tree, find_name.unwrap()).unwrap();
+        println!("Name Matches:{:?}", matches.len());
     }
-
-    if find_name.is_some() {
-        // TODO: handle find files
+    if show_trace {
+        for entry in &matches {
+            println!("{}", &entry);
+        }
     }
 
     if persist_file.is_some() {
@@ -138,6 +137,26 @@ fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Ve
         entries.push(new_entry);
     }
     Some(entries)
+}
+
+fn find_matching_files(tree: Vec<Entry>, key: String) -> Option<Vec<Match>> {
+    let mut matches = vec![];
+    let mut flat_list = vec![];
+    for entry in tree {
+        create_flat_list(&mut flat_list, entry);
+    }
+    let value = key.to_uppercase();
+
+    for entry in &flat_list {
+        if entry.name.to_uppercase().contains(&value) {
+            let match_entry = get_items_by_hash(entry.hash.unwrap(), &flat_list);
+            if match_entry.is_some() {
+                matches.push(match_entry.unwrap());
+            }
+        }
+    }
+
+    Some(matches)
 }
 
 fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Match>> {

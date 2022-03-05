@@ -89,8 +89,10 @@ fn main() {
         for entry in &matches {
             println!("Delete Match for Hash:{}", entry.hash.unwrap());
             for (index, match_entry) in entry.matches.iter().enumerate() {
-                if index == 0 {
-                    continue;
+                if find_duplicates {
+                    if index == 0 {
+                        continue;
+                    }
                 }
                 let delete_result = std::fs::remove_file(match_entry.path.to_owned());
                 if delete_result.is_err() {

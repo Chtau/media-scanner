@@ -39,7 +39,7 @@ fn main() {
     let remove_result = args.remove_result;
 
     let find_duplicates = args.find_duplicate;
-    let find_name = args.find_name.to_owned();
+    let find_name = args.find_name;
 
     println!("Start media-scanner");
     
@@ -68,8 +68,8 @@ fn main() {
         }
     }
 
-    if persist_file.is_some() {
-        let mut dup_file = File::create(persist_file.unwrap()).unwrap();
+    if let Some(p_file) = persist_file {
+        let mut dup_file = File::create(p_file).unwrap();
         for entry in &matches {
             let line = "Hash: ".to_owned() + &entry.hash.unwrap().to_string() + "\n";
             let result = dup_file.write(line.as_bytes());
@@ -77,7 +77,7 @@ fn main() {
                 for match_entry in &entry.matches {
                     let line = match_entry.path.to_owned() + "\n";
                     let result = dup_file.write(line.as_bytes());
-                    if !result.is_ok() {
+                    if result.is_err() {
                         println!(".Could not write Entry: {} to file", &match_entry);
                     }
                 }
@@ -89,12 +89,10 @@ fn main() {
         for entry in &matches {
             println!("Delete Match for Hash:{}", entry.hash.unwrap());
             for (index, match_entry) in entry.matches.iter().enumerate() {
-                if find_duplicates {
-                    if index == 0 {
-                        continue;
-                    }
+                if find_duplicates && index == 0 {
+                    continue;
                 }
-                let delete_result = std::fs::remove_file(match_entry.path.to_owned());
+                let delete_result = std::fs::remove_file(&match_entry.path);
                 if delete_result.is_err() {
                     println!("Could not delete File:{}", match_entry.path.to_owned());
                 } else {
@@ -131,9 +129,9 @@ fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Ve
             }
         } else if path.is_dir() {
             new_entry.is_file = false;
-            let children = build_tree(path.as_path().clone(), new_entry.level + 1, show_trace);
-            if children.is_some() {
-                new_entry.children = children.unwrap();
+            let children = build_tree(path.as_path(), new_entry.level + 1, show_trace);
+            if let Some(child) = children {
+                new_entry.children = child;
             }
         }
         entries.push(new_entry);
@@ -152,15 +150,14 @@ fn find_matching_files(tree: Vec<Entry>, key: String) -> Option<Vec<Match>> {
     for entry in &flat_list {
         if entry.name.to_uppercase().contains(&value) {
             let dupl_entry: Option<&mut Match> = matches.iter_mut().find(|x| x.hash.unwrap() == entry.hash.unwrap());
-            if dupl_entry.is_some() {
-                let dupl_match = dupl_entry.unwrap();
+            if let Some(dupl_match) = dupl_entry {
                 dupl_match.matches.push(MatchEntry {
                     name: entry.name.to_owned(),
                     path: entry.path.to_owned(),
                 });
             } else {
                 let mut duplicate = Match::new();
-                duplicate.hash = Some(entry.hash.unwrap().clone());
+                duplicate.hash = Some(entry.hash.unwrap());
                 duplicate.matches.push(MatchEntry {
                     name: entry.name.to_owned(),
                     path: entry.path.to_owned(),
@@ -187,8 +184,8 @@ fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Match>> {
             if duplicates.iter().filter(|x|x.hash.unwrap() == hash).count() == 0 {
                 // unchecked hash values
                 let duplicate = get_items_by_hash(hash, &flat_list);
-                if duplicate.is_some() {
-                    duplicates.push(duplicate.unwrap());
+                if let Some(dup) = duplicate {
+                    duplicates.push(dup);
                 }
             }
         }
@@ -198,10 +195,10 @@ fn find_duplicate_files(tree: Vec<Entry>) -> Option<Vec<Match>> {
 
 fn get_items_by_hash(hash: Hash, items: &Vec<Entry>) -> Option<Match> {
     let mut duplicate = Match::new();
-    duplicate.hash = Some(hash.clone());
+    duplicate.hash = Some(hash);
     for entry in items {
-        if entry.hash.is_some() {
-            if entry.hash.unwrap() == hash {
+        if let Some(e_hash) = entry.hash {
+            if e_hash == hash {
                 duplicate.matches.push(MatchEntry {
                     name: entry.name.to_owned(),
                     path: entry.path.to_owned(),
@@ -258,10 +255,10 @@ impl std::fmt::Display for Entry {
             }
         } else {
             let place_holder = String::from("    ").repeat(self.level as usize);
-            println!("{}=> {:?} (level {:?})", place_holder, self.name, self.level);
-            if self.children.len() > 0 {
+            _ = writeln!(f, "{}=> {:?} (level {:?})", place_holder, self.name, self.level);
+            if !self.children.is_empty() {
                 for child_entry in &self.children {
-                    println!("{}{}", String::from("    ").repeat(child_entry.level as usize), child_entry);
+                    _ = writeln!(f, "{}{}", String::from("    ").repeat(child_entry.level as usize), child_entry);
                 }
             }
             write!(f, "{}-----Folders:{:?} Files:{:?}-----", place_holder, self.children.iter().filter(|&item| !item.is_file).count(), self.children.iter().filter(|&item| item.is_file).count())
@@ -286,9 +283,9 @@ impl Match {
 
 impl std::fmt::Display for Match {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        println!("Match {:?}", self.hash.unwrap());
+        _ = writeln!(f, "Match {:?}", self.hash.unwrap());
         for entry in &self.matches {
-            println!("{}", &entry);
+            _ = writeln!(f, "{}", &entry);
         }
         write!(f, "Entires {:?}", self.matches.len())
     }

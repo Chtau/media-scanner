@@ -5,4 +5,4 @@
 * find duplicate files based on the files hash value.
 * search for files with a partial name.
 * delete search result.
-* persist resutl to a file.
+* persist the scan result to a file.

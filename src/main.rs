@@ -3,7 +3,7 @@ use std::{path::Path, io::{Read, Write}, fs::File};
 use blake3::Hash;
 use clap::Parser;
 
-/// Simple duplicates check
+/// Simple file duplication check. Use '-p . -d -r' to search for duplicate files in the current directory and remove the result.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -107,7 +107,7 @@ fn main() {
 
 fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Vec<Entry>> {
     if show_trace {
-        println!("Directory:{}", directory.display())
+        println!("[BuildTree] Check directory for entires:{}", directory.display())
     }
     let mut entries = vec![];
     for entry in std::fs::read_dir(directory).unwrap() {
@@ -119,7 +119,7 @@ fn build_tree(directory: &Path, parent_level: u8, show_trace: bool) -> Option<Ve
         new_entry.path = String::from(path.as_path().to_str().unwrap());
         if path.is_file() {
             if show_trace {
-                println!("File:{}", path.display())
+                println!("[BuildTree] Create file entry:{}", path.display())
             }
             new_entry.is_file = true;
             let mut file = std::fs::File::open(path).unwrap();

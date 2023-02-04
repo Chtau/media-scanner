@@ -1,6 +1,6 @@
 [package]
 name = "media-scanner"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Christoph Taucher <taucher.ch@gmail.com>"]
 
